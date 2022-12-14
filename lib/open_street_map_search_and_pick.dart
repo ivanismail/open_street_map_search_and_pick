@@ -14,6 +14,7 @@ class OpenStreetMapSearchAndPick extends StatefulWidget {
   final Color buttonColor;
   final String buttonText;
   final Future<LatLng> Function(BuildContext context)? onCurrentLocationTap;
+  final ThemeData? textFieldThemeData;
 
   const OpenStreetMapSearchAndPick({
     Key? key,
@@ -22,6 +23,7 @@ class OpenStreetMapSearchAndPick extends StatefulWidget {
     this.buttonColor = Colors.blue,
     this.buttonText = 'Set Current Location',
     this.onCurrentLocationTap,
+    this.textFieldThemeData,
   }) : super(key: key);
 
   @override
@@ -38,6 +40,7 @@ class _OpenStreetMapSearchAndPickState
   List<OSMdata> _options = <OSMdata>[];
   Timer? _debounce;
   var client = http.Client();
+  bool isLoadingAddress = true;
 
   void setNameCurrentPos() async {
     double latitude = _mapController.center.latitude;
@@ -63,6 +66,9 @@ class _OpenStreetMapSearchAndPickState
   }
 
   void setNameCurrentPosAtInit() async {
+    isLoadingAddress = true;
+    setState(() {});
+
     double latitude = widget.center.latitude;
     double longitude = widget.center.longitude;
     if (kDebugMode) {
@@ -78,10 +84,12 @@ class _OpenStreetMapSearchAndPickState
     var decodedResponse =
         jsonDecode(utf8.decode(response.bodyBytes)) as Map<dynamic, dynamic>;
 
-    _searchController.text =
-        decodedResponse['display_name'] ?? "MOVE TO CURRENT POSITION";
+    // _searchController.text =
+    //     decodedResponse['display_name'] ?? "MOVE TO CURRENT POSITION";
     focusingLocation =
         decodedResponse['display_name'] ?? "MOVE TO CURRENT POSITION";
+
+    isLoadingAddress = false;
     setState(() {});
   }
 
@@ -89,10 +97,14 @@ class _OpenStreetMapSearchAndPickState
   void initState() {
     _mapController = MapController();
 
-    setNameCurrentPosAtInit();
+    WidgetsBinding.instance!.addPostFrameCallback((time) {
+      setNameCurrentPosAtInit();
+    });
 
     _mapController.mapEventStream.listen((event) async {
       if (event is MapEventMoveEnd) {
+        isLoadingAddress = true;
+        setState(() {});
         var client = http.Client();
         String url =
             'https://nominatim.openstreetmap.org/reverse?format=json&lat=${event.center.latitude}&lon=${event.center.longitude}&zoom=18&addressdetails=1';
@@ -103,6 +115,7 @@ class _OpenStreetMapSearchAndPickState
 
         // _searchController.text = decodedResponse['display_name'] ?? '';
         focusingLocation = decodedResponse['display_name'] ?? '';
+        isLoadingAddress = false;
         setState(() {});
       }
     });
@@ -168,50 +181,53 @@ class _OpenStreetMapSearchAndPickState
               ),
               child: Column(
                 children: [
-                  TextFormField(
-                    controller: _searchController,
-                    focusNode: _focusNode,
-                    decoration: InputDecoration(
-                      hintText: 'Search Location',
-                      border: inputBorder,
-                      focusedBorder: inputFocusBorder,
-                    ),
-                    onChanged: (String value) {
-                      if (_debounce?.isActive ?? false) _debounce?.cancel();
+                  Theme(
+                    data: widget.textFieldThemeData ?? ThemeData(),
+                    child: TextFormField(
+                      controller: _searchController,
+                      focusNode: _focusNode,
+                      decoration: InputDecoration(
+                        hintText: 'Search Location',
+                        border: inputBorder,
+                        focusedBorder: inputFocusBorder,
+                      ),
+                      onChanged: (String value) {
+                        if (_debounce?.isActive ?? false) _debounce?.cancel();
 
-                      _debounce =
-                          Timer(const Duration(milliseconds: 2000), () async {
-                        if (kDebugMode) {
-                          print(value);
-                        }
-                        var client = http.Client();
-                        try {
-                          String url =
-                              'https://nominatim.openstreetmap.org/search?q=$value&format=json&polygon_geojson=1&addressdetails=1';
+                        _debounce =
+                            Timer(const Duration(milliseconds: 2000), () async {
                           if (kDebugMode) {
-                            print(url);
+                            print(value);
                           }
-                          var response = await client.post(Uri.parse(url));
-                          var decodedResponse =
-                              jsonDecode(utf8.decode(response.bodyBytes))
-                                  as List<dynamic>;
-                          if (kDebugMode) {
-                            print(decodedResponse);
+                          var client = http.Client();
+                          try {
+                            String url =
+                                'https://nominatim.openstreetmap.org/search?q=$value&format=json&polygon_geojson=1&addressdetails=1';
+                            if (kDebugMode) {
+                              print(url);
+                            }
+                            var response = await client.post(Uri.parse(url));
+                            var decodedResponse =
+                                jsonDecode(utf8.decode(response.bodyBytes))
+                                    as List<dynamic>;
+                            if (kDebugMode) {
+                              print(decodedResponse);
+                            }
+                            _options = decodedResponse
+                                .map((e) => OSMdata(
+                                    displayname: e['display_name'],
+                                    lat: double.parse(e['lat']),
+                                    lon: double.parse(e['lon'])))
+                                .toList();
+                            setState(() {});
+                          } finally {
+                            client.close();
                           }
-                          _options = decodedResponse
-                              .map((e) => OSMdata(
-                                  displayname: e['display_name'],
-                                  lat: double.parse(e['lat']),
-                                  lon: double.parse(e['lon'])))
-                              .toList();
+
                           setState(() {});
-                        } finally {
-                          client.close();
-                        }
-
-                        setState(() {});
-                      });
-                    },
+                        });
+                      },
+                    ),
                   ),
                   StatefulBuilder(
                     builder: (context, setState) {
@@ -289,6 +305,13 @@ class _OpenStreetMapSearchAndPickState
                             }),
                           ),
                           const SizedBox(height: 16),
+                          Visibility(
+                            visible: isLoadingAddress,
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 16),
+                              child: const LinearProgressIndicator(),
+                            ),
+                          ),
                           WideButton(widget.buttonText, onPressed: () async {
                             pickData().then((value) {
                               widget.onPicked(value);
