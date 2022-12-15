@@ -14,7 +14,7 @@ class OpenStreetMapSearchAndPick extends StatefulWidget {
   final Color buttonColor;
   final String buttonText;
   final Future<LatLng> Function(BuildContext context)? onCurrentLocationTap;
-  final ThemeData? textFieldThemeData;
+  final ThemeData? textFieldThemeData, listTileThemeData;
   final Function(BuildContext, Future<PickedData> Function())? onPicked;
 
   const OpenStreetMapSearchAndPick({
@@ -25,6 +25,7 @@ class OpenStreetMapSearchAndPick extends StatefulWidget {
     this.buttonText = 'Set Current Location',
     this.onCurrentLocationTap,
     this.textFieldThemeData,
+    this.listTileThemeData,
   }) : super(key: key);
 
   @override
@@ -237,21 +238,24 @@ class _OpenStreetMapSearchAndPickState
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: _options.length > 5 ? 5 : _options.length,
                         itemBuilder: (context, index) {
-                          return ListTile(
-                            title: Text(_options[index].displayname),
-                            subtitle: Text(
-                                '${_options[index].lat},${_options[index].lon}'),
-                            onTap: () {
-                              _mapController.move(
-                                  LatLng(
-                                      _options[index].lat, _options[index].lon),
-                                  15.0);
+                          return Theme(
+                            data: widget.listTileThemeData ?? ThemeData(),
+                            child: ListTile(
+                              title: Text(_options[index].displayname),
+                              subtitle: Text(
+                                  '${_options[index].lat},${_options[index].lon}'),
+                              onTap: () {
+                                _mapController.move(
+                                    LatLng(_options[index].lat,
+                                        _options[index].lon),
+                                    15.0);
 
-                              setNameCurrentPos();
-                              _focusNode.unfocus();
-                              _options.clear();
-                              setState(() {});
-                            },
+                                setNameCurrentPos();
+                                _focusNode.unfocus();
+                                _options.clear();
+                                setState(() {});
+                              },
+                            ),
                           );
                         },
                       );
