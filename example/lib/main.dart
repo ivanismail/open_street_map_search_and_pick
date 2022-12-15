@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:open_street_map_search_and_pick/open_street_map_search_and_pick.dart';
@@ -72,10 +73,25 @@ class _MyHomePageState extends State<MyHomePage> {
         onCurrentLocationTap: (context) async {
           return LatLng(-7.2363011, 112.7509539);
         },
-        onPicked: (pickedData) {
-          // print(pickedData.latLong.latitude);
-          // print(pickedData.latLong.longitude);
-          // print(pickedData.address);
+        onPicked: (doPick) async {
+          showDialog(
+            context: context,
+            builder: (context) {
+              return const Center(
+                child: CircularProgressIndicator(),
+              );
+            },
+          );
+
+          PickedData pickedData = await doPick();
+
+          Navigator.pop(context);
+
+          if (kDebugMode) {
+            print(pickedData.latLong.latitude);
+            print(pickedData.latLong.longitude);
+            print(pickedData.address);
+          }
         },
       ),
     );

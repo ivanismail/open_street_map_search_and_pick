@@ -10,11 +10,12 @@ import 'package:open_street_map_search_and_pick/widgets/wide_button.dart';
 
 class OpenStreetMapSearchAndPick extends StatefulWidget {
   final LatLng center;
-  final void Function(PickedData pickedData) onPicked;
+  // final void Function(PickedData pickedData) onPicked;
   final Color buttonColor;
   final String buttonText;
   final Future<LatLng> Function(BuildContext context)? onCurrentLocationTap;
   final ThemeData? textFieldThemeData;
+  final Function(Future<PickedData> Function())? onPicked;
 
   const OpenStreetMapSearchAndPick({
     Key? key,
@@ -312,11 +313,13 @@ class _OpenStreetMapSearchAndPickState
                               child: const LinearProgressIndicator(),
                             ),
                           ),
-                          WideButton(widget.buttonText, onPressed: () async {
-                            pickData().then((value) {
-                              widget.onPicked(value);
-                            });
-                          }, backgroundcolor: widget.buttonColor),
+                          WideButton(
+                            widget.buttonText,
+                            onPressed: () async {
+                              widget.onPicked?.call(pickData);
+                            },
+                            backgroundcolor: widget.buttonColor,
+                          ),
                         ],
                       ),
                     ),
