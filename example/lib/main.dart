@@ -73,7 +73,7 @@ class _MyHomePageState extends State<MyHomePage> {
         onCurrentLocationTap: (context) async {
           return LatLng(-7.2363011, 112.7509539);
         },
-        onPicked: (doPick) async {
+        onPicked: (context, doPick) async {
           showDialog(
             context: context,
             builder: (context) {

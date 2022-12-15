@@ -15,7 +15,7 @@ class OpenStreetMapSearchAndPick extends StatefulWidget {
   final String buttonText;
   final Future<LatLng> Function(BuildContext context)? onCurrentLocationTap;
   final ThemeData? textFieldThemeData;
-  final Function(Future<PickedData> Function())? onPicked;
+  final Function(BuildContext, Future<PickedData> Function())? onPicked;
 
   const OpenStreetMapSearchAndPick({
     Key? key,
@@ -316,7 +316,7 @@ class _OpenStreetMapSearchAndPickState
                           WideButton(
                             widget.buttonText,
                             onPressed: () async {
-                              widget.onPicked?.call(pickData);
+                              widget.onPicked?.call(context, pickData);
                             },
                             backgroundcolor: widget.buttonColor,
                           ),
